@@ -12,18 +12,27 @@ class DlibModel:
         self.yoloModel = YOLO(yoloModel, verbose=False)
 
     def getFace(self, img):
-        # , device="mps"
         print("Get bbox YOLO")
-        results = self.yoloModel(img, device="cpu", verbose=False)
+        try:
+            results = self.yoloModel(img, device="cpu", verbose=False)
+        except Exception as e:
+            print(f"Error initializing YOLO model: {e}")
+            return [], []
+
         if len(results) == 0:
-            return None
+            return [], []
+
         rects = []
         new_boxes = []
         for result in results:
-            bboxes = np.array(result.boxes.xyxy.cpu(), dtype=int)
+            try:
+                bboxes = np.array(result.boxes.xyxy.cpu(), dtype=int)
+            except Exception as e:
+                print(f"Error processing bounding boxes: {e}")
+                continue
+
             if len(bboxes) == 0:
-                return [], []
-            
+                continue
 
             for bbox in bboxes:
                 rects.append(dlib.rectangle(bbox[0], bbox[1], bbox[2], bbox[3]))
