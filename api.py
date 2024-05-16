@@ -7,6 +7,11 @@ import dlib # type: ignore
 from gevent.pywsgi import WSGIServer # type: ignore
 import cv2 # type: ignore
 import json
+import os
+
+os.environ['TORCH_USE_NNPACK'] = '0'
+
+dlib.DLIB_USE_CUDA = False
 
 app = Flask(__name__)
 
