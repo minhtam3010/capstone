@@ -13,7 +13,7 @@ class DlibModel:
 
     def getFace(self, img):
         # , device="mps"
-        results = self.yoloModel(img, verbose=False)
+        results = self.yoloModel(img, device="cpu", verbose=False)
         if len(results) == 0:
             return None
         rects = []
