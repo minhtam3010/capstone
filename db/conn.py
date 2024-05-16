@@ -30,7 +30,6 @@ class MongoConnection:
         query = self.collection.find()
         invoices = []
         for q in query:
-            print("Q: ", q)
             for key in q:
                 if key.startswith("invoice_"):
                     invoices.append(q[key])

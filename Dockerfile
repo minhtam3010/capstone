@@ -7,14 +7,25 @@ WORKDIR /usr/src/app
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
+    git \
     libopenblas-dev \
     liblapack-dev \
     libjpeg-dev \
-    libgl1-mesa-glx \
-    libglib2.0-0 \
+    libpng-dev \
+    libtiff-dev \
+    libavcodec-dev \
+    libavformat-dev \
+    libswscale-dev \
+    libv4l-dev \
+    libxvidcore-dev \
+    libx264-dev \
+    libgtk2.0-dev \
+    pkg-config \
+    libatlas-base-dev \
+    gfortran \
     wget \
     unzip \
-    libx11-dev  # Add libx11-dev for X11 support if needed
+    libx11-dev
 
 # Upgrade pip
 RUN pip install --upgrade pip
@@ -23,7 +34,7 @@ RUN pip install --upgrade pip
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install dlib without AVX and NNPACK support
+# Build and install dlib without AVX support
 RUN wget http://dlib.net/files/dlib-19.22.tar.bz2 && \
     tar xvjf dlib-19.22.tar.bz2 && \
     cd dlib-19.22 && \
@@ -34,6 +45,21 @@ RUN wget http://dlib.net/files/dlib-19.22.tar.bz2 && \
     cd ../.. && \
     pip install dlib-19.22.tar.bz2 && \
     rm -rf dlib-19.22 dlib-19.22.tar.bz2
+
+# Build and install OpenCV without NNPACK support
+RUN git clone --branch 4.5.4 https://github.com/opencv/opencv.git && \
+    git clone --branch 4.5.4 https://github.com/opencv/opencv_contrib.git && \
+    cd opencv && \
+    mkdir build && \
+    cd build && \
+    cmake -D CMAKE_BUILD_TYPE=RELEASE \
+    -D CMAKE_INSTALL_PREFIX=/usr/local \
+    -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules \
+    -D WITH_NNPACK=OFF .. && \
+    make -j$(nproc) && \
+    make install && \
+    cd ../.. && \
+    rm -rf opencv opencv_contrib
 
 # Copy the current directory contents into the container at /usr/src/app
 COPY . .
