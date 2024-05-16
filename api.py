@@ -22,11 +22,11 @@ constraint = 0.038
 @app.route('/verify', methods=['POST'])
 def verify():
     if len(users) == 0:
-        return jsonify({"status": "error", "message": "No face detected"})
-    
+        return jsonify({"status": "error", "message": "No face detected"}), 400
+
     print("Request received")
-    image_files = []
-    # Check if an 'image' part is present in the request files
+
+    # Check if 'img' part is present in the request files
     if 'img' not in request.files:
         return jsonify({"status": "error", "message": "No image provided"}), 400
 
@@ -34,31 +34,31 @@ def verify():
     image_files = request.files.getlist('img')
     if len(image_files) == 0:
         return jsonify({"status": "error", "message": "No image provided"}), 400
+
     # Read the image file
-
     img_read = image_files[0].read()
-
     imgS = cv2.imdecode(np.frombuffer(img_read, np.uint8), cv2.IMREAD_COLOR)
 
-    imgS = cv2.cvtColor(imgS, cv2.COLOR_BGR2RGB)
-    
+    if imgS is None:
+        return jsonify({"status": "error", "message": "Invalid image"}), 400
 
-    face_locations, _ = dlibModel.getFace(imgS)
+    imgS = cv2.cvtColor(imgS, cv2.COLOR_BGR2RGB)
+
+    try:
+        face_locations, _ = dlibModel.getFace(imgS)
+    except Exception as e:
+        return jsonify({"status": "error", "message": "Error in face detection", "error": str(e)}), 500
 
     for face_location in face_locations:
-        landmarks = dlibModel.face_landmarks(imgS, face_location)
+        try:
+            landmarks = dlibModel.face_landmarks(imgS, face_location)
+            normalize_img = dlibModel.normalization(landmarks, new_img=imgS)
+            face_chip = dlib.get_face_chip(normalize_img, landmarks)
+            compared_embedding = np.array(dlibModel.face_encoder.compute_face_descriptor(face_chip), dtype=np.float32)
+        except Exception as e:
+            return jsonify({"status": "error", "message": "Error in processing face", "error": str(e)}), 500
 
-        normalize_img = dlibModel.normalization(landmarks, new_img=imgS)
-
-        face_chip = dlib.get_face_chip(normalize_img, landmarks)
-
-        compared_embedding = np.array(dlibModel.face_encoder.compute_face_descriptor(face_chip), dtype=np.float32)
-
-        k = 1 
-        if len(users) < 5:
-            k = len(users)
-        else:
-            k = 5
+        k = min(len(users), 5)
         labels, distances = index.knn_query(compared_embedding, k=k)
 
         for i in range(len(labels[0])):
@@ -67,11 +67,8 @@ def verify():
             if distance < constraint:
                 user = users[labels[0][i]]
                 return jsonify({"status": "success", "message": user})
-            
-            # else:
-                # return jsonify({"status": "error", "message": f"Faces are not of the same person"})
-            # print("User: ", users[labels[0]])
-    return jsonify({"status": "error", "message": "No face detected"})
+
+    return jsonify({"status": "error", "message": "No face detected"}), 400
 
 @app.route('/add', methods=['POST'])
 def add():
