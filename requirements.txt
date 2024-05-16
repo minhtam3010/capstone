@@ -1,0 +1,11 @@
+Flask
+numpy
+dlib
+opencv-python-headless
+flask-cors
+gevent
+pymongo
+ultralytics
+hnswlib
+redis
+gTTS
