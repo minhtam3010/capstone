@@ -36,29 +36,40 @@ def verify():
         return jsonify({"status": "error", "message": "No image provided"}), 400
 
     # Read the image file
+    print("Read the image")
     img_read = image_files[0].read()
+
+    print("Decode the image")
     imgS = cv2.imdecode(np.frombuffer(img_read, np.uint8), cv2.IMREAD_COLOR)
 
     if imgS is None:
         return jsonify({"status": "error", "message": "Invalid image"}), 400
 
+    print("Convert color image")
     imgS = cv2.cvtColor(imgS, cv2.COLOR_BGR2RGB)
 
     try:
+        # Get the face locations
+        print("Get face locations")
         face_locations, _ = dlibModel.getFace(imgS)
     except Exception as e:
         return jsonify({"status": "error", "message": "Error in face detection", "error": str(e)}), 500
 
     for face_location in face_locations:
         try:
+            print("Get landmarks")
             landmarks = dlibModel.face_landmarks(imgS, face_location)
+            print("Get normalization")
             normalize_img = dlibModel.normalization(landmarks, new_img=imgS)
+            print("Get face chip")
             face_chip = dlib.get_face_chip(normalize_img, landmarks)
+            print("Compute face array embedding")
             compared_embedding = np.array(dlibModel.face_encoder.compute_face_descriptor(face_chip), dtype=np.float32)
         except Exception as e:
             return jsonify({"status": "error", "message": "Error in processing face", "error": str(e)}), 500
 
         k = min(len(users), 5)
+        print("Initialize index ANN algorithm")
         labels, distances = index.knn_query(compared_embedding, k=k)
 
         for i in range(len(labels[0])):

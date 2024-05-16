@@ -13,6 +13,7 @@ class DlibModel:
 
     def getFace(self, img):
         # , device="mps"
+        print("Get bbox YOLO")
         results = self.yoloModel(img, device="cpu", verbose=False)
         if len(results) == 0:
             return None
