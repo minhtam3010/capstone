@@ -1,11 +1,10 @@
-Flask
-numpy
-dlib
-opencv-python-headless
+flask
 flask-cors
 gevent
-pymongo
+dlib
+numpy
+opencv-python
 ultralytics
+pymongo
 hnswlib
-redis
 gTTS

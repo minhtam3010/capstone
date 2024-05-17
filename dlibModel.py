@@ -3,8 +3,6 @@ import dlib # type: ignore
 from ultralytics import YOLO # type: ignore
 import cv2 # type: ignore   
 
-dlib.DLIB_USE_CUDA = False
-
 class DlibModel:
     def __init__(self):
         yoloModel = "yolov8n-face.pt"
