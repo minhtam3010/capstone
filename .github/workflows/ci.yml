@@ -24,4 +24,4 @@ jobs:
 
       - name: Deploy
         run: |
-          ssh -i ${{ secrets.DROPLET_SSHKEY }} ${{ secrets.DROPLET_USERNAME }}@${{ secrets.DROPLET_HOST }} "docker pull ${{ secrets.DOCKER_REPOSITORY_NAME }}:latest"
+          ssh ${{ secrets.DROPLET_USERNAME }}@${{ secrets.DROPLET_HOST }} "docker pull ${{ secrets.DOCKER_REPOSITORY_NAME }}:latest"

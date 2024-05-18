@@ -24,4 +24,4 @@ RUN apt-get update && apt-get install -y \
 EXPOSE 8080
 
 # Run the application
-CMD ["python -u", "api.py"]
+CMD ["python", "api.py"]
