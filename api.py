@@ -144,6 +144,16 @@ def all_invoices():
     invoices = mongoConn.getAllInvoice()
     return jsonify({"status": "success", "message": invoices})
 
+@app.route("/login", methods=["POST"])
+def login():
+    username = request.form["username"]
+    password = request.form["password"]
+    if username == "admin" and password == "faceid":
+        user = {'fullName': 'Le Minh Tam', 'gender': 'maleTeacher', 'vietnameseName': 'Lê Minh Tâm'}
+        return jsonify({"status": "success", "message": user}), 200
+
+    return jsonify({"status": "error", "message": "No face detected"}), 400
+
 def reset():
     global users, index
     users, index = mongoConn.get_all()
