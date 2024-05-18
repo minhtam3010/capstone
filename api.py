@@ -9,6 +9,7 @@ import cv2 # type: ignore
 import json
 
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # Set the maximum request size to 32 MB
 
 CORS(app)
 dlibModel = DlibModel()
