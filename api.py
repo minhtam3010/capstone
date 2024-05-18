@@ -19,7 +19,7 @@ mongoConn = MongoConnection()
 users, index = mongoConn.get_all()
 
 # constraint = 0.038
-constraint = 0.15
+constraint = 0.06
 
 @app.route('/verify', methods=['POST'])
 def verify():
@@ -62,58 +62,64 @@ def verify():
         except Exception as e:
             return jsonify({"status": "error", "message": "Error in processing face", "error": str(e)}), 500
 
-        k = min(len(users), 5)
+        k = min(len(users), 1)
         labels, distances = index.knn_query(compared_embedding, k=k)
 
-        usersSimilarity = {}
-        for i in range(len(labels[0])):
-            distance = distances[0][i]
-            user = users[labels[0][i]]
-            fullName = user["fullName"]
-            if fullName not in usersSimilarity:
-                usersSimilarity[fullName] = {
-                    "distance": [distance],
-                    'user': user
-                }
-            else:
-                usersSimilarity[fullName]["distance"].append(distance)
+        # usersSimilarity = {}
+        # for i in range(len(labels[0])):
+        #     distance = distances[0][i]
+        #     user = users[labels[0][i]]
+        #     fullName = user["fullName"]
+        #     if fullName not in usersSimilarity:
+        #         usersSimilarity[fullName] = {
+        #             "distance": [distance],
+        #             'user': user
+        #         }
+        #     else:
+        #         usersSimilarity[fullName]["distance"].append(distance)
 
-        usersToBeVerified = []
-        highestSimilarity = 0
-        userHighestSimilarity = None
+        # usersToBeVerified = []
+        # highestSimilarity = 0
+        # userHighestSimilarity = None
 
-        # Check to get the highest length of the users similarity
-        for user in usersSimilarity:
-            if len(usersSimilarity[user]['distance']) > highestSimilarity:
-                highestSimilarity = len(usersSimilarity[user]['distance'])
-                userHighestSimilarity = usersSimilarity[user]
-            elif len(usersSimilarity[user]['distance']) == highestSimilarity and highestSimilarity > 0:
-                usersToBeVerified.append(
-                     usersSimilarity[user]
-                )
+        # # Check to get the highest length of the users similarity
+        # for user in usersSimilarity:
+        #     if len(usersSimilarity[user]['distance']) > highestSimilarity:
+        #         highestSimilarity = len(usersSimilarity[user]['distance'])
+        #         userHighestSimilarity = usersSimilarity[user]
+        #     elif len(usersSimilarity[user]['distance']) == highestSimilarity and highestSimilarity > 0:
+        #         usersToBeVerified.append(
+        #              usersSimilarity[user]
+        #         )
 
-        usersToBeVerified.append(userHighestSimilarity)
+        # usersToBeVerified.append(userHighestSimilarity)
 
-        minDistance = float('inf')
-        userResponse = None
-        for userIdx in range(len(usersToBeVerified)):
-            userDistances = usersToBeVerified[userIdx]["distance"]
-            for distance in userDistances:
-                if distance < minDistance:
-                    minDistance = distance
-                    userResponse = usersToBeVerified[userIdx]["user"]
+        # minDistance = float('inf')
+        # userResponse = None
+        # for userIdx in range(len(usersToBeVerified)):
+        #     userDistances = usersToBeVerified[userIdx]["distance"]
+        #     for distance in userDistances:
+        #         if distance < minDistance:
+        #             minDistance = distance
+        #             userResponse = usersToBeVerified[userIdx]["user"]
 
-        if userResponse is not None:
-            return jsonify({"status": "success", "message": userResponse})
+        # if userResponse is not None:
+        #     return jsonify({"status": "success", "message": userResponse})
 
-        return jsonify({"status": "error", "message": "No face detected"}), 400
+        # return jsonify({"status": "error", "message": "No face detected"}), 200
         # for i in range(len(labels[0])):
         #     distance = distances[0][i]
         #     if distance < constraint:
         #         user = users[labels[0][i]]
         #         return jsonify({"status": "success", "message": user})
 
-    return jsonify({"status": "error", "message": "No face detected"}), 400
+        for i in range(len(labels[0])):
+            distance = distances[0][i]
+            user = users[labels[0][i]]
+            if distance < constraint:
+                return jsonify({"status": "success", "message": user})
+
+    return jsonify({"status": "error", "message": "No face detected"}), 200
 
 @app.route('/add', methods=['POST'])
 def add():
@@ -186,7 +192,7 @@ def login():
         user = {'fullName': 'Le Minh Tam', 'gender': 'maleTeacher', 'vietnameseName': 'Lê Minh Tâm'}
         return jsonify({"status": "success", "message": user}), 200
 
-    return jsonify({"status": "error", "message": "No face detected"}), 400
+    return jsonify({"status": "error", "message": "No face detected"}), 200
 
 def reset():
     global users, index
