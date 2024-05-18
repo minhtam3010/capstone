@@ -12,7 +12,6 @@ class DlibModel:
         self.yoloModel = YOLO(yoloModel, verbose=False)
 
     def getFace(self, img):
-        print("Get bbox YOLO")
         try:
             results = self.yoloModel(img, device="cpu", verbose=False)
         except Exception as e:

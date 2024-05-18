@@ -18,7 +18,8 @@ mongoConn = MongoConnection()
 
 users, index = mongoConn.get_all()
 
-constraint = 0.038
+# constraint = 0.038
+constraint = 0.15
 
 @app.route('/verify', methods=['POST'])
 def verify():
@@ -37,48 +38,80 @@ def verify():
         return jsonify({"status": "error", "message": "No image provided"}), 400
 
     # Read the image file
-    print("Read the image")
     img_read = image_files[0].read()
 
-    print("Decode the image")
     imgS = cv2.imdecode(np.frombuffer(img_read, np.uint8), cv2.IMREAD_COLOR)
 
     if imgS is None:
         return jsonify({"status": "error", "message": "Invalid image"}), 400
 
-    print("Convert color image")
     imgS = cv2.cvtColor(imgS, cv2.COLOR_BGR2RGB)
 
     try:
         # Get the face locations
-        print("Get face locations")
         face_locations, _ = dlibModel.getFace(imgS)
     except Exception as e:
         return jsonify({"status": "error", "message": "Error in face detection", "error": str(e)}), 500
 
     for face_location in face_locations:
         try:
-            print("Get landmarks")
             landmarks = dlibModel.face_landmarks(imgS, face_location)
-            print("Get normalization")
             normalize_img = dlibModel.normalization(landmarks, new_img=imgS)
-            print("Get face chip")
             face_chip = dlib.get_face_chip(normalize_img, landmarks)
-            print("Compute face array embedding")
             compared_embedding = np.array(dlibModel.face_encoder.compute_face_descriptor(face_chip), dtype=np.float32)
         except Exception as e:
             return jsonify({"status": "error", "message": "Error in processing face", "error": str(e)}), 500
 
         k = min(len(users), 5)
-        print("Initialize index ANN algorithm")
         labels, distances = index.knn_query(compared_embedding, k=k)
 
+        usersSimilarity = {}
         for i in range(len(labels[0])):
             distance = distances[0][i]
-            print("Distance: ", distance)
-            if distance < constraint:
-                user = users[labels[0][i]]
-                return jsonify({"status": "success", "message": user})
+            user = users[labels[0][i]]
+            fullName = user["fullName"]
+            if fullName not in usersSimilarity:
+                usersSimilarity[fullName] = {
+                    "distance": [distance],
+                    'user': user
+                }
+            else:
+                usersSimilarity[fullName]["distance"].append(distance)
+
+        usersToBeVerified = []
+        highestSimilarity = 0
+        userHighestSimilarity = None
+
+        # Check to get the highest length of the users similarity
+        for user in usersSimilarity:
+            if len(usersSimilarity[user]['distance']) > highestSimilarity:
+                highestSimilarity = len(usersSimilarity[user]['distance'])
+                userHighestSimilarity = usersSimilarity[user]
+            elif len(usersSimilarity[user]['distance']) == highestSimilarity and highestSimilarity > 0:
+                usersToBeVerified.append(
+                     usersSimilarity[user]
+                )
+
+        usersToBeVerified.append(userHighestSimilarity)
+
+        minDistance = float('inf')
+        userResponse = None
+        for userIdx in range(len(usersToBeVerified)):
+            userDistances = usersToBeVerified[userIdx]["distance"]
+            for distance in userDistances:
+                if distance < minDistance:
+                    minDistance = distance
+                    userResponse = usersToBeVerified[userIdx]["user"]
+
+        if userResponse is not None:
+            return jsonify({"status": "success", "message": userResponse})
+
+        return jsonify({"status": "error", "message": "No face detected"}), 400
+        # for i in range(len(labels[0])):
+        #     distance = distances[0][i]
+        #     if distance < constraint:
+        #         user = users[labels[0][i]]
+        #         return jsonify({"status": "success", "message": user})
 
     return jsonify({"status": "error", "message": "No face detected"}), 400
 
