@@ -19,7 +19,7 @@ mongoConn = MongoConnection()
 users, index = mongoConn.get_all()
 
 # constraint = 0.038
-constraint = 0.06
+constraint = 0.05
 
 @app.route('/verify', methods=['POST'])
 def verify():
