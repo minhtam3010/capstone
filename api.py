@@ -7,6 +7,7 @@ import dlib # type: ignore
 from gevent.pywsgi import WSGIServer # type: ignore
 import cv2 # type: ignore
 import json
+import redis # type: ignore
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # Set the maximum request size to 32 MB
@@ -16,10 +17,16 @@ dlibModel = DlibModel()
 
 mongoConn = MongoConnection()
 
+r = redis.Redis(
+    host="redis-10826.c252.ap-southeast-1-1.ec2.redns.redis-cloud.com", port=10826,
+    username="default", # use your Redis user. More info https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/
+    password="qRfi4voTGJQmjk5k5wBU8FI94Ajflys3", # use your Redis password
+)
+
 users, index = mongoConn.get_all()
 
 # constraint = 0.038
-constraint = 0.04
+constraint = 0.042
 
 @app.route('/verify', methods=['POST'])
 def verify():
@@ -65,54 +72,6 @@ def verify():
         k = min(len(users), 1)
         labels, distances = index.knn_query(compared_embedding, k=k)
 
-        # usersSimilarity = {}
-        # for i in range(len(labels[0])):
-        #     distance = distances[0][i]
-        #     user = users[labels[0][i]]
-        #     fullName = user["fullName"]
-        #     if fullName not in usersSimilarity:
-        #         usersSimilarity[fullName] = {
-        #             "distance": [distance],
-        #             'user': user
-        #         }
-        #     else:
-        #         usersSimilarity[fullName]["distance"].append(distance)
-
-        # usersToBeVerified = []
-        # highestSimilarity = 0
-        # userHighestSimilarity = None
-
-        # # Check to get the highest length of the users similarity
-        # for user in usersSimilarity:
-        #     if len(usersSimilarity[user]['distance']) > highestSimilarity:
-        #         highestSimilarity = len(usersSimilarity[user]['distance'])
-        #         userHighestSimilarity = usersSimilarity[user]
-        #     elif len(usersSimilarity[user]['distance']) == highestSimilarity and highestSimilarity > 0:
-        #         usersToBeVerified.append(
-        #              usersSimilarity[user]
-        #         )
-
-        # usersToBeVerified.append(userHighestSimilarity)
-
-        # minDistance = float('inf')
-        # userResponse = None
-        # for userIdx in range(len(usersToBeVerified)):
-        #     userDistances = usersToBeVerified[userIdx]["distance"]
-        #     for distance in userDistances:
-        #         if distance < minDistance:
-        #             minDistance = distance
-        #             userResponse = usersToBeVerified[userIdx]["user"]
-
-        # if userResponse is not None:
-        #     return jsonify({"status": "success", "message": userResponse})
-
-        # return jsonify({"status": "error", "message": "No face detected"}), 200
-        # for i in range(len(labels[0])):
-        #     distance = distances[0][i]
-        #     if distance < constraint:
-        #         user = users[labels[0][i]]
-        #         return jsonify({"status": "success", "message": user})
-
         for i in range(len(labels[0])):
             distance = distances[0][i]
             user = users[labels[0][i]]
@@ -123,6 +82,7 @@ def verify():
 
 @app.route('/add', methods=['POST'])
 def add():
+    global r
     if 'img' not in request.files:
       return jsonify({"status": "error", "message": "No image provided"}), 400
     # Get the image file from the request
@@ -158,6 +118,7 @@ def add():
     if balance is None:
         mongoConn.insertBalance(userJson["fullName"], 500000)
 
+    r.set("update", "true")
     reset()
     return jsonify({"status": "success", "message": "User added successfully"})
 
